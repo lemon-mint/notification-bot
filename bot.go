@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/fasthttp/router"
 	"github.com/lemon-mint/godotenv"
+	"github.com/lemon-mint/notification-bot/ent"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/valyala/fasthttp"
 )
 
@@ -17,6 +20,16 @@ var telegramAPIServerPrefix string
 
 func main() {
 	godotenv.Load()
+
+	client, err := ent.Open("sqlite3", "file:test.db?cache=shared&_fk=1")
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	defer client.Close()
+	if err := client.Schema.Create(context.Background()); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
 	r := router.New()
 	telegramAPIServerPrefix = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_KEY")
 	var telegramWebhookEndPoint string = base64Rand(32)
@@ -37,7 +50,7 @@ func main() {
 	} else {
 		WEBHOOK_URL = PUBLIC_URL + "/tghook/" + telegramWebhookEndPoint
 	}
-	err := tgSetWebhook(WEBHOOK_URL)
+	err = tgSetWebhook(WEBHOOK_URL, []string{"message"})
 	if err != nil {
 		log.Fatalln(err)
 	} else {
@@ -55,7 +68,7 @@ func telegramWebhook(c *fasthttp.RequestCtx) {
 		log.Println("Error :", err, "Body :", string(c.Request.Body()))
 		return
 	}
-	ExecuteUserCommand(e)
+	ExecuteUserCommand(e, c.ConnID())
 }
 
 func base64Rand(size int) string {
@@ -80,17 +93,21 @@ func RequestJSONPost(URL string, payload interface{}) (*fasthttp.Response, error
 	return resp, err
 }
 
-func ExecuteUserCommand(e *Update) {
-	r, err := RequestJSONPost(telegramAPIServerPrefix+"/sendMessage", SendMessage{
-		Method: "sendMessage",
-		ChatID: e.Message.Chat.ID,
-		Text:   "pong",
-	})
-	defer fasthttp.ReleaseResponse(r)
-	if err != nil {
-		log.Println("Error :", err, "Event :", e)
-		return
-	} else {
-		log.Println(string(r.Body()))
+func ExecuteUserCommand(e *Update, ID uint64) {
+	if e.Message != nil {
+		if e.Message.Text == "/ping" {
+			r, err := RequestJSONPost(telegramAPIServerPrefix+"/sendMessage", SendMessage{
+				Method: "sendMessage",
+				ChatID: e.Message.Chat.ID,
+				Text:   "pong!",
+			})
+			defer fasthttp.ReleaseResponse(r)
+			if err != nil {
+				log.Println("Error :", err, "Event :", e)
+				return
+			} else {
+				log.Println(string(r.Body()))
+			}
+		}
 	}
 }

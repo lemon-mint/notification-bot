@@ -15,9 +15,10 @@ type SetWebhook struct {
 	DropPendingUpdates *bool    `json:"drop_pending_updates,omitempty"`
 }
 
-func tgSetWebhook(URL string) error {
+func tgSetWebhook(URL string, AllowedUpdates []string) error {
 	resp, err := RequestJSONPost(telegramAPIServerPrefix+"/setWebhook", SetWebhook{
-		URL: URL,
+		URL:            URL,
+		AllowedUpdates: AllowedUpdates,
 	})
 	log.Println(string(resp.Body()))
 	fasthttp.ReleaseResponse(resp)
@@ -63,10 +64,10 @@ type User struct {
 type Update struct {
 	UpdateID int `json:"update_id"`
 
-	Message           Message `json:"message"`
-	EditedMessage     Message `json:"edited_message"`
-	ChannelPost       Message `json:"channel_post"`
-	EditedChannelPost Message `json:"edited_channel_post"`
+	Message           *Message `json:"message"`
+	EditedMessage     *Message `json:"edited_message"`
+	ChannelPost       *Message `json:"channel_post"`
+	EditedChannelPost *Message `json:"edited_channel_post"`
 }
 
 type Message struct {
