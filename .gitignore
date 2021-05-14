@@ -16,3 +16,6 @@
 
 .env
 notification-bot
+
+test.db
+.DS_Store
