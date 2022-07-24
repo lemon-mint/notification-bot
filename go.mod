@@ -1,6 +1,6 @@
 module github.com/lemon-mint/notification-bot
 
-go 1.16
+go 1.18
 
 require (
 	entgo.io/ent v0.11.1
